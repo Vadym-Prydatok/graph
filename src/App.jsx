@@ -61,6 +61,7 @@ function App() {
   
       context.moveTo(0, y);
       context.lineTo(canvasWidth, y);
+      context.fillStyle = 'red';
       context.fillText(markingValue.toFixed(3), 10, y - 5);
     }
   
