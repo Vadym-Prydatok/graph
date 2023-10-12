@@ -5,13 +5,31 @@ function App() {
   const [openData, setOpenData] = useState(false);
   const [socket, setSocket] = useState(null);
   const [dataPoints, setDataPoints] = useState([]);
-  const height = 200;
-  const maxDataPoints = 600;
-  const canvasWidth = 800;
+
+  const [maxValue, setMaxValue] = useState(0);
+  const [minValue, setMinValue] = useState(Infinity);
+  const [height, setHeight] = useState(100)
+
+  const maxDataPoints = window.screen.width / 2;
+  const canvasWidth = window.screen.width / 1.5;
   const canvasRef = useRef(null);
+  console.log(window.screen.width)
+  
 
   if (dataPoints.length > maxDataPoints) {
     setDataPoints(dataPoints.slice(dataPoints.length - maxDataPoints));
+  }
+
+  const maxData = Math.max.apply(null, dataPoints);
+  const minData = Math.min.apply(null, dataPoints);
+
+  if (maxData > maxValue) {
+    setMaxValue(maxData);
+    setHeight((maxData * 10));
+  }
+
+  if (minData < minValue) {
+    setMinValue(minData)
   }
 
   useEffect(() => {
@@ -20,35 +38,49 @@ function App() {
 
   function drawLine() {
     const canvas = canvasRef.current;
-
+    const canvasHeight = height;
+    const rows = 10;
+    const margin = 20;
+  
     if (!canvas) return;
     const context = canvas.getContext("2d");
-
+  
     context.clearRect(0, 0, canvas.width, canvas.height);
+  
+    const dataRange = maxValue - minValue;
+    const graphHeight = canvasHeight - 2 * margin;
+  
+    //marking
+    context.beginPath();
+    context.strokeStyle = "#bbb";
+    context.lineWidth = 1;
+  
+    for (let i = 0; i <= rows; i++) {
+      const markingValue = minValue + (dataRange / rows) * i;
+      const y = canvasHeight - margin - (markingValue - minValue) / dataRange * graphHeight;
+  
+      context.moveTo(0, y);
+      context.lineTo(canvasWidth, y);
+      context.fillText(markingValue.toFixed(3), 10, y - 5);
+    }
+  
+    context.stroke();
+    context.closePath();
+  
+    //graph
+    context.beginPath();
     context.strokeStyle = "blue";
     context.lineWidth = 2;
-    context.lineWidth = 1;
-
-    for (let i = 1; i < 6; i++) {
-      const y = height - i * (height / 6);
-      context.moveTo(0, y);
-      context.lineTo(10, y);
-      context.fillText(i.toString(), 15, y + 4);
-    }
-
-    context.stroke();
-
-    context.beginPath();
+  
     for (let i = 1; i < dataPoints.length; i++) {
       const x1 = (i - 1) * (canvasWidth / maxDataPoints);
       const x2 = i * (canvasWidth / maxDataPoints);
-      const y1 = height - dataPoints[i - 1];
-      const y2 = height - dataPoints[i];
-
+      const y1 = canvasHeight - margin - (dataPoints[i - 1] - minValue) / dataRange * graphHeight;
+      const y2 = canvasHeight - margin - (dataPoints[i] - minValue) / dataRange * graphHeight;
       context.moveTo(x1, y1);
       context.lineTo(x2, y2);
     }
-
+  
     context.stroke();
     context.closePath();
   }
@@ -59,7 +91,9 @@ function App() {
     );
     newSocket.onmessage = function (event) {
       const newData = JSON.parse(event.data);
-      setDataPoints((prevDataPoints) => [...prevDataPoints, +newData.q * 100]);
+
+      const BTStoUSD = +newData.p / 1000;
+      setDataPoints((prevDataPoints) => [...prevDataPoints, BTStoUSD]);
     };
 
     setSocket(newSocket);
@@ -82,8 +116,10 @@ function App() {
         <button onClick={openWebSocket}>Відкрити WebSocket</button>
       )}
       <div>
-        <h1>Кількість активу, що торгується binance</h1>
+        <h1>BTC Bitcoin</h1>
+        {maxValue ? <p>{`min-$${minValue.toFixed(3)} max-$${maxValue.toFixed(3)}`}</p> : null}
         <canvas
+          className="canvas"
           ref={canvasRef}
           width={canvasWidth}
           height={height}
@@ -92,5 +128,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
